@@ -149,7 +149,10 @@
     "yargs-parser": "^20.2.9"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "sequelize-cli db:migrate --config app/config/db.conf.js",
+    "seed": "sequelize-cli db:seed:all --config app/config/db.conf.js",
+    "undo": "sequelize-cli db:migrate:undo --config app/config/db.conf.js"
   },
   "repository": {
     "type": "git",

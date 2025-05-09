@@ -5,8 +5,9 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('rooms', {
       room_uuid: {
-        type: Sequelize.STRING(16),
+        type: Sequelize.UUID(),
         primaryKey: true,
+        defaultValue: Sequelize.literal('UUID()'),
       },
       room_number: {
         type: Sequelize.STRING(30),
