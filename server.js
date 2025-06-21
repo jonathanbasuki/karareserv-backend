@@ -2,15 +2,24 @@ require('dotenv').config();
 
 const express = require('express');
 const app = express();
-const db = require('./app/models');
+const bodyParser = require('body-parser');
+const path = require('path');
 
-app.use(express.json());
+const db = require('./app/config/db.conf');
 
 const PORT = process.env.PORT || 3000;
+
+const roomRoutes = require('./app/routes/Room.route');
+
+app.use(bodyParser.json());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(roomRoutes);
 
 db.sequelize.authenticate()
     .then(() => {
         console.log('✅ Database connected');
-        app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+        app.listen(PORT, () => console.log(`🚀 Server running on ${process.env.BASE_URL}`));
     })
     .catch(err => console.error('❌ Database connection error: ', err));
