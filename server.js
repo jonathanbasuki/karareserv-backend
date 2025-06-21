@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 const roomRoute = require('./app/routes/Room.route');
 const bookingRoute = require('./app/routes/Booking.route');
+const paymentRoute = require('./app/routes/Payment.route');
 
 app.use(bodyParser.json());
 app.use(express.json());
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(roomRoute);
 app.use(bookingRoute);
+app.use(paymentRoute);
 
 db.sequelize.authenticate()
     .then(() => {

@@ -1,10 +1,9 @@
 const { v4: uuidv4 } = require('uuid');
-const { sequelize } = require('../config/db.conf');
 
-const { Room, Booking } = require('../models');
+const { Room, Booking, Payment } = require('../models');
 
 exports.createBooking = async (data) => {
-    const { room_uuid, start_time, end_time, booking_date, user_uuid } = data;
+    const { room_uuid, start_time, end_time, booking_date, user_uuid, payment_method = 'cash' } = data;
 
     const room = await Room.findOne({ where: { room_uuid } });
 
@@ -19,7 +18,7 @@ exports.createBooking = async (data) => {
 
     const total_price = parseFloat(room.hourly_rate) * durationInHours;
 
-    const newBooking = await Booking.create({
+    const booking = await Booking.create({
         booking_uuid: uuidv4(),
         user_uuid,
         room_uuid,
@@ -30,7 +29,15 @@ exports.createBooking = async (data) => {
         booking_status: 'pending'
     });
 
-    return newBooking;
+    await Payment.create({
+        payment_uuid: uuidv4(),
+        user_uuid,
+        booking_uuid: booking.booking_uuid,
+        amount: total_price,
+        payment_status: 'unpaid'
+    });
+
+    return booking;
 };
 
 exports.getAllBookings = async (user) => {
@@ -65,11 +72,12 @@ exports.updateBooking = async (uuid, data) => {
         throw new Error('Only pending bookings can be updated');
     }
 
-    const updatedFields = {
-        ...data
-    };
+    const updatedFields = { ...data };
 
-    const shouldRecalculate = data.start_time || data.end_time || data.booking_date;
+    let newTotalPrice = booking.total_price;
+
+    const shouldRecalculate =
+        data.start_time || data.end_time || data.booking_date || data.room_uuid;
 
     if (shouldRecalculate) {
         const roomUuid = data.room_uuid || booking.room_uuid;
@@ -85,26 +93,37 @@ exports.updateBooking = async (uuid, data) => {
         const end = new Date(`${bookingDate}T${endTime}`);
 
         const durationInHours = (end - start) / (1000 * 60 * 60);
+
         if (durationInHours <= 0) throw new Error('End time must be after start time');
 
-        updatedFields.total_price = parseFloat(room.hourly_rate) * durationInHours;
+        newTotalPrice = parseFloat(room.hourly_rate) * durationInHours;
+        updatedFields.total_price = newTotalPrice;
     }
 
     await booking.update(updatedFields);
+
+    const payment = await Payment.findOne({ where: { booking_uuid: booking.booking_uuid } });
+    if (payment) {
+        await payment.update({ amount: newTotalPrice });
+    }
 
     return booking;
 };
 
 exports.deleteBooking = async (uuid) => {
     const booking = await Booking.findByPk(uuid);
+    const payment = await Payment.findOne({ where: { booking_uuid: uuid } });
 
     if (!booking) throw new Error('Booking not found');
+    if (!payment) throw new Error('Payment not found');
 
     if (booking.booking_status === 'confirmed') {
         throw new Error('Confirmed bookings cannot be deleted');
     }
 
-    await booking.destroy();
+    await payment.destroy();
 
-    return { message: 'Booking deleted (soft) successfully' };
+    await booking.update({ booking_status: 'cancelled' });
+
+    return { message: 'Booking canceled successfully' };
 };
