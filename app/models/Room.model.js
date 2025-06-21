@@ -41,6 +41,13 @@ Room.associate = (models) => {
         foreignKey: 'room_uuid',
         as: 'images'
     });
+
+    Room.hasMany(models.Booking, {
+        foreignKey: 'room_uuid',
+        as: 'bookings',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    });
 };
 
 module.exports = Room;
